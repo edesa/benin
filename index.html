@@ -2,8 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Benin Gallery</title>
+  <title>HopeDesign (Benin) Gallery</title>
   <style>
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.3rem;
+        margin-top: 16px;
+        margin-bottom: 16px;
+      }
+      .download-btn button {
+        font-size: 1rem;
+        padding: 10px 16px;
+      }
+      .gallery {
+        grid-template-columns: 1fr;
+        margin: 10px;
+        gap: 12px;
+      }
+      .gallery-item {
+        width: 100%;
+        height: 200px;
+        padding: 8px;
+      }
+      .gallery-item img {
+        margin-bottom: 4px;
+      }
+      .pagination {
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .pagination button {
+        font-size: 0.95rem;
+        padding: 7px 12px;
+      }
+      .gallery-item span {
+        font-size: 1.1rem;
+      }
+    }
     h1 {
       text-align: center;
       margin-top: 32px;
@@ -64,41 +99,74 @@
   </style>
 </head>
 <body>
-  <h1 valign="middle">Benin Gallery</h1>
+  <h1 valign="middle" style="margin-bottom: 24px;">HopeDesign (Benin) Gallery</h1>
+  <div style="text-align:center; margin-bottom: 24px;">
+      <a href="files/HopeDesign-ChoixTissus.pdf" download class="download-btn">
+        <button style="padding: 12px 24px; font-size: 1.1rem; border-radius: 6px; background: #4a90e2; color: #fff; border: none; cursor: pointer;">Download full list PDF</button>
+      </a>
+    </div>
     <div class="gallery" id="gallery"></div>
-    <div class="pagination">
+    <div class="pagination" id="pagination">
       <button id="prevBtn">Previous</button>
       <span id="pageInfo"></span>
       <button id="nextBtn">Next</button>
     </div>
+    <div id="mobile-viewer" style="display:none; text-align:center;">
+      <div id="mobile-image-container" style="position:relative;">
+        <img id="mobile-image" src="" alt="" style="max-width:100%; max-height:300px; border-radius:8px;">
+        <span id="mobile-image-number" style="display:block; font-size:1.3rem; font-weight:bold; margin-top:8px;"></span>
+      </div>
+    </div>
     <script>
-      const images = Array.from({length: 51}, (_, i) => `images/${i+1}.png`);
-      const perPage = 10;
+    const images = Array.from({length: 51}, (_, i) => `images/${i+1}.png`);
+    const perPage = 10;
       let currentPage = 1;
+      let isMobile = window.matchMedia('(max-width: 600px)').matches;
       const gallery = document.getElementById('gallery');
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
       const pageInfo = document.getElementById('pageInfo');
+      const pagination = document.getElementById('pagination');
+      const mobileViewer = document.getElementById('mobile-viewer');
+      const mobileImage = document.getElementById('mobile-image');
+      const mobileImageNumber = document.getElementById('mobile-image-number');
+      let mobileIndex = 0;
 
       function renderGallery() {
-        gallery.innerHTML = '';
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
-        images.slice(start, end).forEach((src, idx) => {
-          const item = document.createElement('div');
-          item.className = 'gallery-item';
-          const img = document.createElement('img');
-          img.src = src;
-          img.alt = `${start + idx + 1}`;
-          const span = document.createElement('span');
-          span.textContent = start + idx + 1;
-          item.appendChild(img);
-          item.appendChild(span);
-          gallery.appendChild(item);
-        });
-        pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(images.length / perPage)}`;
-        prevBtn.disabled = currentPage === 1;
-        nextBtn.disabled = currentPage === Math.ceil(images.length / perPage);
+        if (isMobile) {
+          gallery.style.display = 'none';
+          pagination.style.display = 'none';
+          mobileViewer.style.display = 'block';
+          showMobileImage(mobileIndex);
+        } else {
+          gallery.style.display = 'grid';
+          pagination.style.display = 'flex';
+          mobileViewer.style.display = 'none';
+          const start = (currentPage - 1) * perPage;
+          const end = start + perPage;
+          gallery.innerHTML = '';
+          images.slice(start, end).forEach((src, idx) => {
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = `${start + idx + 1}`;
+            const span = document.createElement('span');
+            span.textContent = start + idx + 1;
+            item.appendChild(img);
+            item.appendChild(span);
+            gallery.appendChild(item);
+          });
+          pageInfo.textContent = `Page ${currentPage} of ${Math.ceil(images.length / perPage)}`;
+          prevBtn.disabled = currentPage === 1;
+          nextBtn.disabled = currentPage === Math.ceil(images.length / perPage);
+        }
+      }
+
+      function showMobileImage(idx) {
+        mobileImage.src = images[idx];
+        mobileImage.alt = `${idx + 1}`;
+        mobileImageNumber.textContent = idx + 1;
       }
 
       prevBtn.addEventListener('click', () => {
@@ -114,6 +182,34 @@
         }
       });
 
+      // Swipe support for mobile
+      let touchStartX = null;
+      mobileImage.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+      });
+      mobileImage.addEventListener('touchend', function(e) {
+        if (touchStartX === null) return;
+        let touchEndX = e.changedTouches[0].clientX;
+        let diff = touchEndX - touchStartX;
+        if (Math.abs(diff) > 40) {
+          if (diff < 0 && mobileIndex < images.length - 1) {
+            mobileIndex++;
+            showMobileImage(mobileIndex);
+          } else if (diff > 0 && mobileIndex > 0) {
+            mobileIndex--;
+            showMobileImage(mobileIndex);
+          }
+        }
+        touchStartX = null;
+      });
+
+      // Listen for resize to switch between mobile/desktop
+      window.addEventListener('resize', function() {
+        isMobile = window.matchMedia('(max-width: 600px)').matches;
+        renderGallery();
+      });
+
+      // Initial render
       renderGallery();
     </script>
 </body>
